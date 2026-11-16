@@ -1,33 +1,70 @@
 # Seedess PHP SDK
 
-Official PHP client for the [Seedess API](https://seedess.com/docs/api/).
+Official Seedess SDK for PHP.
 
-> **Status:** planned for `0.1.0`. The API contract is live; this client is next.
+**Server-side only.** The SDK uses a secret API key (`key_…`) to create and control streams.
+Never ship it in a browser or a mobile app. Playback uses the separate `@seedess/*-p2p`
+packages and a per-stream public token (`pk_…`).
 
-## What it covers
-
-- create and refresh streams
-- read offload, CDN and P2P metrics
-- send per-session telemetry
-- manage server-side API keys and per-stream public tokens
-
-## Install (planned)
+## Install
 
 ```bash
-composer require seedess/seedess
+composer require seedess/sdk
 ```
 
-## Contract
+PHP 8.1+ with `ext-curl` and `ext-json`.
 
-Generated from `contracts/api.json` in the Seedess monorepo and checked against the same
-JSON Schemas. See the [API reference](https://seedess.com/docs/api/) and
-[Libraries](https://seedess.com/docs/libraries/).
+## Use
+
+```php
+use Seedess\Client;
+
+$seedess = new Client(getenv('SEEDESS_API_KEY'));
+
+$stream = $seedess->createStream([
+    'url'  => 'https://origin.example/master.m3u8',
+    'id'   => 'demo',
+    'live' => true,
+]);
+
+echo $stream['publicToken'];
+echo $stream['playback']['master'];
+```
+
+Pass only the public token and stream id to the page.
+
+## Methods
+
+| Method | HTTP | Purpose |
+| --- | --- | --- |
+| `createStream(array $input)` | `POST /api/v1/streams` | Ingest a manifest, mint the public token. |
+| `getStream(string $id)` | `GET /api/v1/streams/:id` | Status, variants, segment count. |
+| `listStreams()` | `GET /api/v1/streams` | All streams in the tenant. |
+| `refreshStream(string $id)` | `POST /api/v1/streams/:id/refresh` | Pull new live segments. |
+| `disablePeers(string $id)` | `POST /api/v1/streams/:id/kill` | CDN only; playback continues. |
+| `enablePeers(string $id)` | `POST /api/v1/streams/:id/revive` | Re-enable peer delivery. |
+| `getMetrics(string $id)` | `GET /api/v1/streams/:id/metrics` | Offload and delivery counters. |
+| `sendTelemetry(array $input)` | `POST /api/v1/telemetry` | One session batch (public, rate limited). |
+
+`request($method, $path, $body = null, $auth = true)` is available for routes without a helper.
+
+## Errors
+
+```php
+use Seedess\SeedessException;
+
+try {
+    $seedess->createStream(['url' => $url]);
+} catch (SeedessException $error) {
+    echo $error->status, $error->errorCode, $error->getMessage();
+}
+```
 
 ## Links
 
 - Docs: https://seedess.com/docs/
 - API: https://seedess.com/docs/api/
-- Issues: https://github.com/Seedess/php/issues
+- Libraries: https://seedess.com/docs/libraries/
 
 ## License
 
