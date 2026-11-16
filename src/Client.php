@@ -45,10 +45,8 @@ final class Client
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         if ($raw === false) {
             $message = curl_error($handle);
-            curl_close($handle);
             throw new \RuntimeException('Seedess transport error: ' . $message);
         }
-        curl_close($handle);
         return [$status, (string) $raw];
     }
 
